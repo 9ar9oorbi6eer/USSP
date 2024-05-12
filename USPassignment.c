@@ -14,6 +14,8 @@ int pipe_fd[2];  // File descriptors for the pipe
 char *file_names[MAX_FILES];  // Array to store file names
 int file_count = 0;  // Counter for number of files
 
+
+
 int main(int argc, char *argv[]) 
 {
     // Initialize local variables
