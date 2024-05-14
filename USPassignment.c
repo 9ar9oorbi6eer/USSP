@@ -12,63 +12,8 @@
 
 #define MAX_FILES 100 // max number of .usp files to handle
 
-// Global variables
 int pipe_fd[2];  // File descriptors for the pipe
 int results_pipe_fd[2]; // File descriptors for the pipe to receive results from child
-
-void child_process() 
-{
-    // these are declerations of buffer and file descriptor for reading data
-    char buffer[1024]; // was 256
-    int fd;
-    char read_buffer[1024];
-    ssize_t read_size;
-
-    // close unused ends of pipes in child process
-    close(pipe_fd[1]);  // Close the write-end of the pipe in the child
-    close(results_pipe_fd[0]); // Close the read-end of the results pipe in the child
-
-    while ((read_size = read(pipe_fd[0], buffer, sizeof(buffer) - 1)) > 0) // continously read from file until no more data is available
-    {
-        buffer[read_size] = '\0'; // Ensure null termination
-        printf("Child received: %s\n", buffer);
-
-        // Open and process the file using system calls
-        fd = open(buffer, O_RDONLY);
-        if (fd == -1) {
-            perror("Failed to open file");
-            continue;
-        }
-
-        int bytes_read = read(fd, read_buffer, sizeof(read_buffer) - 1);
-        if (bytes_read < 0) {
-            perror("Read failed");
-            close(fd);
-            continue;
-        }
-        read_buffer[bytes_read] = '\0';
-
-        // Split the content to process the date of birth and calculate age
-        char *name = strtok(read_buffer, "\n");
-        char *dob = strtok(NULL, "\n");
-        struct tm birth_tm = {0};
-        strptime(dob, "%d-%m-%Y", &birth_tm);
-        time_t birth_time = mktime(&birth_tm);
-        time_t current_time = time(NULL);
-        double seconds = difftime(current_time, birth_time);
-        int years = seconds / (365.24 * 24 * 3600);
-
-        // Prepare the result string
-        char result[1024]; // was 300
-        sprintf(result, "%s:%d", name, years);
-        write(results_pipe_fd[1], result, strlen(result) + 1); // Send results back to parent
-        
-        close(fd);
-    }
-    close(pipe_fd[0]);
-    close(results_pipe_fd[1]);
-    exit(EXIT_SUCCESS);
-}
 
 int main(int argc, char *argv[]) 
 {
@@ -92,7 +37,7 @@ int main(int argc, char *argv[])
     }
     else if (pid == 0) 
     {
-        child_process();
+        child_process(pipe_fd, results_pipe_fd);
     }
     else 
     {
@@ -124,7 +69,6 @@ int main(int argc, char *argv[])
             perror("Failed to open result.txt");
             exit(EXIT_FAILURE);
         }
-
 
         char results_buffer[1024]; // was 300
         ssize_t bytes_read;
