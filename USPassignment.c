@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
             {
                 write(pipe_fd[1], entry->d_name, strlen(entry->d_name) + 1);
                 printf("Processing file: %s\n", entry->d_name); // Add this line
-                sleep(1); // this was 1
+                sleep(1); // this was 1strstr
             }
         }
         closedir(dir);

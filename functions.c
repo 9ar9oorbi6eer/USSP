@@ -13,7 +13,9 @@ void child_process(int pipe_fd[], int results_pipe_fd[])
     char buffer[1024]; // was 256
     int fd;
     char read_buffer[1024];
+    char result[1024 * 10]; // Increased size to accumulate results
     ssize_t read_size;
+    int result_length = 0; // To keep track of the current length of the result buffer
 
     close(pipe_fd[1]);  // Close the write-end of the pipe in the child
     close(results_pipe_fd[0]); // Close the read-end of the results pipe in the child
@@ -45,13 +47,16 @@ void child_process(int pipe_fd[], int results_pipe_fd[])
         time_t current_time = time(NULL);
         double seconds = difftime(current_time, birth_time);
         int years = seconds / (365.24 * 24 * 3600);
+        // re read this snprint review this
+        // Append the result to the result buffer
+        result_length += snprintf(result + result_length, sizeof(result) - result_length, "%s:%d\n", name, years);
 
-        char result[1024]; // was 300
-        sprintf(result, "%s:%d", name, years);
-        write(results_pipe_fd[1], result, strlen(result) + 1); // Send results back to parent
-        
         close(fd);
     }
+
+    // Send accumulated results back to parent
+    write(results_pipe_fd[1], result, result_length);
+    
     close(pipe_fd[0]);
     close(results_pipe_fd[1]);
     exit(EXIT_SUCCESS);
