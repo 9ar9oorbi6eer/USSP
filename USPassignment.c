@@ -1,130 +1,3 @@
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <unistd.h>
-// #include <dirent.h>
-// #include <string.h>
-// #include <sys/types.h>
-// #include <sys/stat.h>
-// #include <fcntl.h>
-// #include <sys/wait.h>
-// #include <time.h>
-
-// #define MAX_FILES 100 // max number of .usp files to handle
-
-// // Global variables
-// int pipe_fd[2];  // File descriptors for the pipe
-// int results_pipe_fd[2]; // File descriptors for the pipe to receive results from child
-// char *file_names[MAX_FILES];  // Array to store file names
-// int file_count = 0;  // Counter for number of files
-
-// void child_process() 
-// {
-//     char buffer[256];
-//     close(pipe_fd[1]);  // Close the write-end of the pipe in the child
-//     close(results_pipe_fd[0]); // Close the read-end of the results pipe in the child
-
-//     // Read filenames from the pipe
-//     while (read(pipe_fd[0], buffer, sizeof(buffer)) > 0) 
-//     {
-//         printf("Child received: %s\n", buffer);
-//         // Process each file here (placeholder)
-//         write(results_pipe_fd[1], "Processed", 10); // Send results back to parent
-//     }
-//     close(pipe_fd[0]);
-//     close(results_pipe_fd[1]);
-//     exit(EXIT_SUCCESS);
-// }
-
-
-// int main(int argc, char *argv[]) 
-// {
-//     // Initialize local variables
-//     DIR *dir; // a pointer to a directory stream
-//     struct dirent *entry; // a pointer to a struct representing directory enteries
-//     pid_t pid;
-//     FILE *result_file;
-
-//     // Create a pipe
-//     if (pipe(pipe_fd) == -1 || pipe(results_pipe_fd) == -1) // this creates a pipe and stores file descripters in pip_fd
-//     {
-//         perror("pipe"); // this is if the pipe fails
-//         exit(EXIT_FAILURE);
-//     }
-
-// // Fork a child process
-//     pid = fork();
-//     if (pid == -1) 
-//     {
-//         perror("fork");
-//         exit(EXIT_FAILURE);
-
-//     } 
-//     else if (pid == 0) 
-//     {
-//         // Child process
-//         child_process();
-//     } 
-//     else 
-//     {
-//         // Parent process
-//         close(pipe_fd[0]);  // Close the read-end of the pipe in the parent
-//         close(results_pipe_fd[1]); // Close the write-end of the results pipe in the parent
-
-
-
-//     // Open the directory containing the executable if it fails then print an error
-//     if ((dir = opendir(".")) == NULL) 
-//     {
-//         perror("Failed to open directory");
-//         exit(EXIT_FAILURE);
-//     }
-
-//     // Here you can add the code to read and filter .usp files
-//     // Placeholder for reading directory entries
-//     while ((entry = readdir(dir)) != NULL) 
-//     {
-//             if (strstr(entry->d_name, ".usp") != NULL && file_count < MAX_FILES) // check count limit
-//             {
-//                 // Allocate memory for the filename
-//                 file_names[file_count] = malloc(strlen(entry->d_name) + 1); 
-//                 if (file_names[file_count] == NULL) // check memory allocation success
-//                 {
-//                     perror("Failed to allocate memory for filename");
-//                     exit(EXIT_FAILURE);
-//                 }
-//                 strcpy(file_names[file_count], entry->d_name);
-//                 write(pipe_fd[1], file_names[file_count], strlen(file_names[file_count]) + 1);
-//                 file_count++;
-//             }
-//         }
-//     // Close the directory
-//         closedir(dir);
-//         close(pipe_fd[1]);
-
-//         result_file = fopen("result.txt", "w");
-//         if (!result_file)
-//         {
-//             perror("Failed to open result.txt");
-//             exit(EXIT_FAILURE);
-//         }
-
-//         char results_buffer[256];
-//         while (read(results_pipe_fd[0], results_buffer, sizeof(results_buffer)) > 0) 
-//         {
-//             fprintf(result_file, "%s\n", results_buffer);
-//         }
-//         fclose(result_file);
-
-//         for (int i = 0; i < file_count; i++) 
-//         {
-//             free(file_names[i]);
-//         }
-
-//         wait(NULL);
-//         close(results_pipe_fd[0]);
-//     }
-//     return EXIT_SUCCESS;
-// }
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -135,6 +8,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <time.h>
+#include "functions.h"
 
 #define MAX_FILES 100 // max number of .usp files to handle
 
@@ -144,15 +18,17 @@ int results_pipe_fd[2]; // File descriptors for the pipe to receive results from
 
 void child_process() 
 {
-    char buffer[256];
+    // these are declerations of buffer and file descriptor for reading data
+    char buffer[1024]; // was 256
     int fd;
     char read_buffer[1024];
     ssize_t read_size;
 
+    // close unused ends of pipes in child process
     close(pipe_fd[1]);  // Close the write-end of the pipe in the child
     close(results_pipe_fd[0]); // Close the read-end of the results pipe in the child
 
-    while ((read_size = read(pipe_fd[0], buffer, sizeof(buffer) - 1)) > 0) 
+    while ((read_size = read(pipe_fd[0], buffer, sizeof(buffer) - 1)) > 0) // continously read from file until no more data is available
     {
         buffer[read_size] = '\0'; // Ensure null termination
         printf("Child received: %s\n", buffer);
@@ -183,10 +59,10 @@ void child_process()
         int years = seconds / (365.24 * 24 * 3600);
 
         // Prepare the result string
-        char result[300];
+        char result[1024]; // was 300
         sprintf(result, "%s:%d", name, years);
         write(results_pipe_fd[1], result, strlen(result) + 1); // Send results back to parent
-
+        
         close(fd);
     }
     close(pipe_fd[0]);
@@ -228,12 +104,13 @@ int main(int argc, char *argv[])
             perror("Failed to open directory");
             exit(EXIT_FAILURE);
         }
-
         while ((entry = readdir(dir)) != NULL) 
         {
             if (strstr(entry->d_name, ".usp") != NULL)
             {
                 write(pipe_fd[1], entry->d_name, strlen(entry->d_name) + 1);
+                printf("Processing file: %s\n", entry->d_name); // Add this line
+                sleep(1); // this was 1
             }
         }
         closedir(dir);
@@ -248,7 +125,8 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
 
-        char results_buffer[300];
+
+        char results_buffer[1024]; // was 300
         ssize_t bytes_read;
         while ((bytes_read = read(results_pipe_fd[0], results_buffer, sizeof(results_buffer) - 1)) > 0)
         {
