@@ -1,5 +1,0 @@
-sample1.usp: name: Alice Age = 25
-sample3.usp: name: John Age = 38
-sample4.usp: name: Cindy Age = 23
-sample2.usp: name: Michael Age = 30
-

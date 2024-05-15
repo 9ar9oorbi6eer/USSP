@@ -58,10 +58,13 @@ void process_file(const char *filename, char *result, int *result_length) {
     char *name = strtok(read_buffer, "\n");
     char *dob = strtok(NULL, "\n");
     int age = calculate_age(dob);
-    *result_length += snprintf(result + *result_length, 10240 - *result_length, "%s: name: %s Age = %d\n", filename, name, age);
+
+    // Adjust the snprintf to only include name and age in the desired format.
+    *result_length += snprintf(result + *result_length, 10240 - *result_length, "%s:%d\n", name, age);
 
     close(fd);
 }
+
 
 
 // parent process functions
