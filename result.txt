@@ -1,4 +1,4 @@
-franco:38
-zaid:21
-moh:38
+lucy:25
+franco:21
+zaid:19
 
