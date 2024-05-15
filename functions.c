@@ -38,9 +38,8 @@ int read_from_pipe(int fd, char *buffer, size_t size)
     }
     return read_size;
 }
-
-void process_file(const char *filename, char *result, int *result_length) 
-{
+// Process individual file content and format output
+void process_file(const char *filename, char *result, int *result_length) {
     char read_buffer[1024];
     int fd = open(filename, O_RDONLY);
     if (fd == -1) {
@@ -58,8 +57,8 @@ void process_file(const char *filename, char *result, int *result_length)
 
     char *name = strtok(read_buffer, "\n");
     char *dob = strtok(NULL, "\n");
-    int years = calculate_age(dob);
-    *result_length += snprintf(result + *result_length, 10240 - *result_length, "%s:%d\n", name, years);
+    int age = calculate_age(dob);
+    *result_length += snprintf(result + *result_length, 10240 - *result_length, "%s: name: %s Age = %d\n", filename, name, age);
 
     close(fd);
 }
