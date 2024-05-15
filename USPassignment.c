@@ -19,25 +19,18 @@ void parent_process(int pipe_fd[], int results_pipe_fd[]);
 
 int main(int argc, char *argv[]) 
 {
-    // Create pipes
-    if (pipe(pipe_fd) == -1 || pipe(results_pipe_fd) == -1)
-    {
-        perror("pipe");
-        exit(EXIT_FAILURE);
+    // Create pipes using the new external function
+    if (create_pipes(pipe_fd, results_pipe_fd) == -1) {
+        exit(EXIT_FAILURE);  // Exit if pipe creation failed
     }
 
     pid_t pid = fork();
-    if (pid == -1) 
-    {
+    if (pid == -1) {
         perror("fork");
         exit(EXIT_FAILURE);
-    }
-    else if (pid == 0) 
-    {
+    } else if (pid == 0) {
         child_process(pipe_fd, results_pipe_fd);
-    }
-    else 
-    {
+    } else {
         parent_process(pipe_fd, results_pipe_fd);
     }
     return EXIT_SUCCESS;

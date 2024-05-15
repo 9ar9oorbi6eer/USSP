@@ -17,3 +17,10 @@ int calculate_age(const char* dob)
     return difftime(current_time, birth_time) / (365.24 * 24 * 3600);
 }
 
+int create_pipes(int pipe_fd[2], int results_pipe_fd[2]) {
+    if (pipe(pipe_fd) == -1 || pipe(results_pipe_fd) == -1) {
+        perror("pipe");
+        return -1; // Return error indicator
+    }
+    return 0; // Return success indicator
+}
