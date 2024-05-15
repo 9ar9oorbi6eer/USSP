@@ -2,5 +2,6 @@
 #define PROCESSES_H
 
 void child_process(int pipe_fd[], int results_pipe_fd[]);
+void parent_process(int pipe_fd[], int results_pipe_fd[]);
 
 #endif
