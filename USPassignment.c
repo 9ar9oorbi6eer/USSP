@@ -23,14 +23,14 @@ int main(int argc, char *argv[])
     // Create pipes using the new external function
     if (create_pipes(pipe_fd, results_pipe_fd) == -1) 
     {
-        exit(EXIT_FAILURE);  // Exit if pipe creation failed
+        return 0; // Exit if pipe creation failed
     }
 
     pid_t pid = fork();
     if (pid == -1) 
     {
         perror("fork");
-        exit(EXIT_FAILURE);
+        return 0;
     } else if (pid == 0) 
     {
         child_process(pipe_fd, results_pipe_fd);
@@ -38,5 +38,5 @@ int main(int argc, char *argv[])
     {
         parent_process(pipe_fd, results_pipe_fd);
     }
-    return EXIT_SUCCESS;
+    return 0;
 }

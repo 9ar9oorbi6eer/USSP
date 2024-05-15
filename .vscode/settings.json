@@ -4,6 +4,7 @@
         "time.h": "c",
         "string.h": "c",
         "functions.h": "c",
-        "wait.h": "c"
+        "wait.h": "c",
+        "unistd.h": "c"
     }
 }

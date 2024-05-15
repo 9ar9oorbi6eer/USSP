@@ -84,7 +84,7 @@ void read_results_and_write(int fd_result, int results_pipe_fd[])
     if (fd_result == -1) 
     {
         perror("Failed to open result.txt");
-        exit(EXIT_FAILURE);
+        return 0;
     }
 
     char results_buffer[1024];

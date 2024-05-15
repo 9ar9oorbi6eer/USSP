@@ -31,7 +31,7 @@ void child_process(int pipe_fd[], int results_pipe_fd[])
     write(results_pipe_fd[1], result, result_length);
     close(pipe_fd[0]);
     close(results_pipe_fd[1]);
-    exit(EXIT_SUCCESS);
+    return 1;
 }
 
 
@@ -44,7 +44,7 @@ void parent_process(int pipe_fd[], int results_pipe_fd[])
     if ((dir = opendir(".")) == NULL) 
     {
         perror("Failed to open directory");
-        exit(EXIT_FAILURE);
+        return 0;
     }
 
     send_filenames(dir, pipe_fd[1]);
