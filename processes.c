@@ -10,10 +10,13 @@
 #include <time.h>
 #include "functions.h"
 
+#define READ_BUFFER_SIZE 1024
+#define RESULT_BUFFER_SIZE 10240
+
 int read_from_pipe(int fd, char *buffer, size_t size);
 void process_file(const char *filename, char *result, int *result_length);
 
-void child_process(int pipe_fd[], int results_pipe_fd[]) 
+int child_process(int pipe_fd[], int results_pipe_fd[]) 
 {
     close(pipe_fd[1]); // Close the write-end of the main pipe in the child
     close(results_pipe_fd[0]); // Close the read-end of the results pipe in the child
@@ -22,31 +25,34 @@ void child_process(int pipe_fd[], int results_pipe_fd[])
     if (read(pipe_fd[0], &num_files, sizeof(num_files)) == -1) 
     {
         perror("Error reading number of files from pipe");
-        exit(EXIT_FAILURE);
+        return -1; // return an error code
     }
     printf("Received count of .usp files from parent: %d\n", num_files);
 
-    char buffer[1024];
-    char result[10240];  // Increased buffer size for potential large results
+    char buffer[READ_BUFFER_SIZE];
+    char result[RESULT_BUFFER_SIZE];
     int result_length = 0;
 
     for (int i = 0; i < num_files; i++) 
     {
-        if (read_from_pipe(pipe_fd[0], buffer, sizeof(buffer)) > 0) 
+        if (read_from_pipe(pipe_fd[0], buffer, sizeof(buffer)) <= 0) 
         {
-            process_file(buffer, result, &result_length);
+            return -2; // return an error code if read_from_pipe fails
         }
+        process_file(buffer, result, &result_length);
     }
 
     if (write(results_pipe_fd[1], result, result_length) == -1) 
     {
         perror("Error writing results to pipe");
+        return -3; // return an error code
     }
     close(pipe_fd[0]);
     close(results_pipe_fd[1]);
+    return 0; // return success
 }
 
-void parent_process(int pipe_fd[], int results_pipe_fd[]) 
+int parent_process(int pipe_fd[], int results_pipe_fd[]) 
 {
     close(pipe_fd[0]);  // Close the read-end of the pipe in the parent
     close(results_pipe_fd[1]); // Close the write-end of the results pipe in the parent
@@ -55,7 +61,7 @@ void parent_process(int pipe_fd[], int results_pipe_fd[])
     if ((dir = opendir(".")) == NULL) 
     {
         perror("Failed to open directory");
-        return;
+        return -1;
     }
 
     int num_files = count_usp_files(dir);
@@ -63,7 +69,7 @@ void parent_process(int pipe_fd[], int results_pipe_fd[])
     {
         perror("Error writing number of files to pipe");
         closedir(dir);
-        return;
+        return -2;
     }
     printf("Sent count of .usp files to child: %d\n", num_files);
     send_filenames(dir, pipe_fd[1]);
@@ -73,12 +79,13 @@ void parent_process(int pipe_fd[], int results_pipe_fd[])
     if (fd_result == -1) 
     {
         perror("Failed to open result.txt");
-        return;
+        return -3;
     }
     read_results_and_write(fd_result, results_pipe_fd);
 
     wait(NULL);
     close(results_pipe_fd[0]);
+    return 0;
 }
 
 int count_usp_files(DIR *dir) 
@@ -92,6 +99,6 @@ int count_usp_files(DIR *dir)
             count++;
         }
     }
-    rewinddir(dir);  // Reset directory stream position for future iterations
+    rewinddir(dir);
     return count;
 }

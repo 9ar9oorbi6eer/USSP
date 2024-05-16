@@ -20,24 +20,29 @@ void parent_process(int pipe_fd[], int results_pipe_fd[]);
 
 int main(int argc, char *argv[]) 
 {
+    // Define return codes
+    const int SUCCESS = 0;
+    const int PIPE_FAILURE = -1;
+    const int FORK_FAILURE = -2;
+
     // Create pipes using the new external function
     if (create_pipes(pipe_fd, results_pipe_fd) == -1) 
     {
-        return EXIT_FAILURE; // Exit if pipe creation failed
+        return PIPE_FAILURE; // Return custom error code if pipe creation failed
     }
 
     pid_t pid = fork();
     if (pid == -1) 
     {
         perror("Error forking process");
-        return EXIT_FAILURE;
+        return FORK_FAILURE; // Return custom error code if fork failed
     } else if (pid == 0) 
     {
         // In child process
         close(pipe_fd[1]); // Close write-end of main pipe
         close(results_pipe_fd[0]); // Close read-end of results pipe
         child_process(pipe_fd, results_pipe_fd);
-        exit(EXIT_SUCCESS);  // Ensure child exits after completion
+        return SUCCESS;  // Ensure child exits after completion
     } else 
     {
         // In parent process
@@ -46,5 +51,5 @@ int main(int argc, char *argv[])
         parent_process(pipe_fd, results_pipe_fd);
     }
 
-    return EXIT_SUCCESS;
+    return SUCCESS;
 }

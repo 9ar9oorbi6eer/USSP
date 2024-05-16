@@ -10,6 +10,9 @@
 #include <time.h>
 #include "functions.h"
 
+#define READ_BUFFER_SIZE 1024
+#define RESULT_BUFFER_SIZE 10240
+
 int calculate_age(const char* dob) 
 {
     struct tm birth_tm = {0};
@@ -62,7 +65,7 @@ int read_from_pipe(int fd, char *buffer, size_t size)
 // Process individual file content and format output
 void process_file(const char *filename, char *result, int *result_length) 
 {
-    char read_buffer[1024];
+    char read_buffer[READ_BUFFER_SIZE];
     int fd = open(filename, O_RDONLY);
     if (fd == -1) 
     {
@@ -102,7 +105,7 @@ void process_file(const char *filename, char *result, int *result_length)
     }
 
     // Adjust the snprintf to only include name and age in the desired format.
-    *result_length += snprintf(result + *result_length, 10240 - *result_length, "%s:%d\n", name, age);
+    *result_length += snprintf(result + *result_length, RESULT_BUFFER_SIZE - *result_length, "%s:%d\n", name, age);
 
     close(fd);
 }
@@ -111,14 +114,15 @@ void process_file(const char *filename, char *result, int *result_length)
 void send_filenames(DIR *dir, int pipe_fd) 
 {
     struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) 
+    int stop_flag = 0; // Flag to stop the loop
+    while (!stop_flag && (entry = readdir(dir)) != NULL) 
     {
         if (strstr(entry->d_name, ".usp") != NULL) 
         {
             if (write(pipe_fd, entry->d_name, strlen(entry->d_name) + 1) == -1) 
             {
                 perror("Error writing filename to pipe");
-                break;
+                stop_flag = 1; // Set flag to stop the loop
             }
             printf("Processing file: %s\n", entry->d_name);
             sleep(1);
@@ -135,24 +139,28 @@ void read_results_and_write(int fd_result, int results_pipe_fd[])
         return;
     }
 
-    char results_buffer[1024];
+    char results_buffer[READ_BUFFER_SIZE];
     ssize_t bytes_read;
-    while ((bytes_read = read(results_pipe_fd[0], results_buffer, sizeof(results_buffer) - 1)) > 0) 
+    int stop_flag = 0; // Flag to stop the loop
+    while (!stop_flag && (bytes_read = read(results_pipe_fd[0], results_buffer, sizeof(results_buffer) - 1)) > 0) 
     {
         if (bytes_read == -1) 
         {
             perror("Error reading results from pipe");
+            stop_flag = 1; // Set flag to stop the loop
             break;
         }
         results_buffer[bytes_read] = '\0';
         if (write(fd_result, results_buffer, strlen(results_buffer)) == -1) 
         {
             perror("Error writing results to result.txt");
+            stop_flag = 1; // Set flag to stop the loop
             break;
         }
         if (write(fd_result, "\n", 1) == -1) 
         {
             perror("Error writing newline to result.txt");
+            stop_flag = 1; // Set flag to stop the loop
             break;
         }
     }
