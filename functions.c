@@ -13,8 +13,17 @@
 int calculate_age(const char* dob) 
 {
     struct tm birth_tm = {0};
-    strptime(dob, "%d-%m-%Y", &birth_tm);
+    if (strptime(dob, "%d-%m-%Y", &birth_tm) == NULL) 
+    {
+        fprintf(stderr, "Error: Invalid date format in DOB: %s\n", dob);
+        return -1; // Return -1 for invalid date format
+    }
     time_t birth_time = mktime(&birth_tm);
+    if (birth_time == -1) 
+    {
+        fprintf(stderr, "Error: mktime failed for DOB: %s\n", dob);
+        return -1;
+    }
     time_t current_time = time(NULL);
     return difftime(current_time, birth_time) / (365.24 * 24 * 3600);
 }
@@ -34,18 +43,25 @@ int create_pipes(int pipe_fd[2], int results_pipe_fd[2])
     return 0;
 }
 
-
 // child process functions
 int read_from_pipe(int fd, char *buffer, size_t size) 
 {
     ssize_t read_size = read(fd, buffer, size - 1);
-    if (read_size > 0) {
+    if (read_size == -1) 
+    {
+        perror("Error reading from pipe");
+        return -1;
+    }
+    if (read_size > 0) 
+    {
         buffer[read_size] = '\0';
     }
     return read_size;
 }
+
 // Process individual file content and format output
-void process_file(const char *filename, char *result, int *result_length) {
+void process_file(const char *filename, char *result, int *result_length) 
+{
     char read_buffer[1024];
     int fd = open(filename, O_RDONLY);
     if (fd == -1) 
@@ -71,7 +87,19 @@ void process_file(const char *filename, char *result, int *result_length) {
 
     char *name = strtok(read_buffer, "\n");
     char *dob = strtok(NULL, "\n");
+    if (name == NULL || dob == NULL) 
+    {
+        fprintf(stderr, "Error: Invalid file format in file: %s\n", filename);
+        close(fd);
+        return;
+    }
     int age = calculate_age(dob);
+    if (age == -1) 
+    {
+        fprintf(stderr, "Error calculating age for file: %s\n", filename);
+        close(fd);
+        return;
+    }
 
     // Adjust the snprintf to only include name and age in the desired format.
     *result_length += snprintf(result + *result_length, 10240 - *result_length, "%s:%d\n", name, age);
@@ -79,15 +107,19 @@ void process_file(const char *filename, char *result, int *result_length) {
     close(fd);
 }
 
-
-
 // parent process functions
 void send_filenames(DIR *dir, int pipe_fd) 
 {
     struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
-        if (strstr(entry->d_name, ".usp") != NULL) {
-            write(pipe_fd, entry->d_name, strlen(entry->d_name) + 1);
+    while ((entry = readdir(dir)) != NULL) 
+    {
+        if (strstr(entry->d_name, ".usp") != NULL) 
+        {
+            if (write(pipe_fd, entry->d_name, strlen(entry->d_name) + 1) == -1) 
+            {
+                perror("Error writing filename to pipe");
+                break;
+            }
             printf("Processing file: %s\n", entry->d_name);
             sleep(1);
         }
@@ -100,15 +132,29 @@ void read_results_and_write(int fd_result, int results_pipe_fd[])
     if (fd_result == -1) 
     {
         perror("Failed to open result.txt");
-        return 0;
+        return;
     }
 
     char results_buffer[1024];
     ssize_t bytes_read;
-    while ((bytes_read = read(results_pipe_fd[0], results_buffer, sizeof(results_buffer) - 1)) > 0) {
+    while ((bytes_read = read(results_pipe_fd[0], results_buffer, sizeof(results_buffer) - 1)) > 0) 
+    {
+        if (bytes_read == -1) 
+        {
+            perror("Error reading results from pipe");
+            break;
+        }
         results_buffer[bytes_read] = '\0';
-        write(fd_result, results_buffer, strlen(results_buffer));
-        write(fd_result, "\n", 1);
+        if (write(fd_result, results_buffer, strlen(results_buffer)) == -1) 
+        {
+            perror("Error writing results to result.txt");
+            break;
+        }
+        if (write(fd_result, "\n", 1) == -1) 
+        {
+            perror("Error writing newline to result.txt");
+            break;
+        }
     }
     close(fd_result);
 }

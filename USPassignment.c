@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     // Create pipes using the new external function
     if (create_pipes(pipe_fd, results_pipe_fd) == -1) 
     {
-        return 0; // Exit if pipe creation failed
+        return EXIT_FAILURE; // Exit if pipe creation failed
     }
 
     pid_t pid = fork();
@@ -33,11 +33,18 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     } else if (pid == 0) 
     {
+        // In child process
+        close(pipe_fd[1]); // Close write-end of main pipe
+        close(results_pipe_fd[0]); // Close read-end of results pipe
         child_process(pipe_fd, results_pipe_fd);
         exit(EXIT_SUCCESS);  // Ensure child exits after completion
     } else 
     {
+        // In parent process
+        close(pipe_fd[0]); // Close read-end of main pipe
+        close(results_pipe_fd[1]); // Close write-end of results pipe
         parent_process(pipe_fd, results_pipe_fd);
     }
 
+    return EXIT_SUCCESS;
 }
