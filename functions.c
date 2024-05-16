@@ -21,13 +21,19 @@ int calculate_age(const char* dob)
 
 int create_pipes(int pipe_fd[2], int results_pipe_fd[2]) 
 {
-    if (pipe(pipe_fd) == -1 || pipe(results_pipe_fd) == -1) 
+    if (pipe(pipe_fd) == -1) 
     {
-        perror("pipe");
-        return -1; // Return error indicator
+        perror("Error creating main communication pipe");
+        return -1;
     }
-    return 0; // Return success indicator
+    if (pipe(results_pipe_fd) == -1) 
+    {
+        perror("Error creating results pipe");
+        return -1;
+    }
+    return 0;
 }
+
 
 // child process functions
 int read_from_pipe(int fd, char *buffer, size_t size) 
@@ -42,14 +48,22 @@ int read_from_pipe(int fd, char *buffer, size_t size)
 void process_file(const char *filename, char *result, int *result_length) {
     char read_buffer[1024];
     int fd = open(filename, O_RDONLY);
-    if (fd == -1) {
+    if (fd == -1) 
+    {
         perror("Failed to open file");
         return;
     }
 
     int bytes_read = read(fd, read_buffer, sizeof(read_buffer) - 1);
-    if (bytes_read < 0) {
-        perror("Read failed");
+    if (bytes_read == -1) 
+    {
+        perror("Error reading from file");
+        close(fd);
+        return;
+    } 
+    else if (bytes_read == 0) 
+    {
+        fprintf(stderr, "Unexpected end of file: %s\n", filename);
         close(fd);
         return;
     }

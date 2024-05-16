@@ -29,14 +29,15 @@ int main(int argc, char *argv[])
     pid_t pid = fork();
     if (pid == -1) 
     {
-        perror("fork");
-        return 0;
+        perror("Error forking process");
+        return EXIT_FAILURE;
     } else if (pid == 0) 
     {
         child_process(pipe_fd, results_pipe_fd);
+        exit(EXIT_SUCCESS);  // Ensure child exits after completion
     } else 
     {
         parent_process(pipe_fd, results_pipe_fd);
     }
-    return 0;
+
 }
