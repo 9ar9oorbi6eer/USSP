@@ -9,6 +9,8 @@
 #include <sys/wait.h>
 #include <time.h>
 #include "functions.h"
+#include "processes.h"
+
 
 #define READ_BUFFER_SIZE 1024
 #define RESULT_BUFFER_SIZE 10240
@@ -165,4 +167,40 @@ void read_results_and_write(int fd_result, int results_pipe_fd[])
         }
     }
     close(fd_result);
+}
+
+// new functions
+int setup_pipes(int pipe_fd[2], int results_pipe_fd[2])
+{
+    if (create_pipes(pipe_fd, results_pipe_fd) == -1)
+    {
+        return -1;  // Return error code for pipe creation failure
+    }
+    return 0;  // Success
+}
+
+int process_fork(int pipe_fd[2], int results_pipe_fd[2])
+{
+    pid_t pid = fork();
+    if (pid == -1)
+    {
+        perror("Error forking process");
+        return -2;  // Return error code for fork failure
+    }
+    else if (pid == 0)
+    {
+        // In child process
+        close(pipe_fd[1]); // Close write-end of main pipe
+        close(results_pipe_fd[0]); // Close read-end of results pipe
+        child_process(pipe_fd, results_pipe_fd);
+        return 0;  // Ensure child exits after completion
+    }
+    else
+    {
+        // In parent process
+        close(pipe_fd[0]); // Close read-end of main pipe
+        close(results_pipe_fd[1]); // Close write-end of results pipe
+        parent_process(pipe_fd, results_pipe_fd);
+    }
+    return 0;  // Success
 }

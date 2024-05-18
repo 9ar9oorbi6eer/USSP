@@ -10,9 +10,11 @@
 #include <time.h>
 #include "functions.h"
 
+
 #define READ_BUFFER_SIZE 1024
 #define RESULT_BUFFER_SIZE 10240
 
+int count_usp_files(DIR *dir);
 int read_from_pipe(int fd, char *buffer, size_t size);
 void process_file(const char *filename, char *result, int *result_length);
 

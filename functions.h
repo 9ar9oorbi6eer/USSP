@@ -13,4 +13,8 @@ int read_from_pipe(int fd, char *buffer, size_t size);
 void send_filenames(DIR *dir, int pipe_fd);
 void read_results_and_write(int fd_result, int results_pipe_fd[]);
 
+int setup_pipes(int pipe_fd[2], int results_pipe_fd[2]);
+int process_fork(int pipe_fd[2], int results_pipe_fd[2]);
+
+
 #endif
