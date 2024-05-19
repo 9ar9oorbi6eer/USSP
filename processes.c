@@ -11,13 +11,19 @@
 #include "functions.h"
 
 
-#define READ_BUFFER_SIZE 1024
-#define RESULT_BUFFER_SIZE 10240
+#define READ_BUFFER_SIZE 1024 // buffer size for reading from files
+#define RESULT_BUFFER_SIZE 10240 // buffer size for storing results
 
+// Function prototypes
 int count_usp_files(DIR *dir);
 int read_from_pipe(int fd, char *buffer, size_t size);
 void process_file(const char *filename, char *result, int *result_length);
 
+
+//  * Child process to handle reading file names and processing files.
+//  * paramter pipe_fd Array with two file descriptors for the main communication pipe
+//  * parameter results_pipe_fd Array with two file descriptors for the results pipe
+//  * Returns 0 on successful execution, negative error codes on failure
 int child_process(int pipe_fd[], int results_pipe_fd[]) 
 {
     close(pipe_fd[1]); // Close the write-end of the main pipe in the child
@@ -54,6 +60,12 @@ int child_process(int pipe_fd[], int results_pipe_fd[])
     return 0; // return success
 }
 
+
+
+// * Parent process to handle directory operations and communication with the child.
+//  * parameter pipe_fd Array with two file descriptors for the main communication pipe
+//  * paramter results_pipe_fd Array with two file descriptors for the results pipe
+//  * parameter Returns 0 on successful execution, negative error codes on failure
 int parent_process(int pipe_fd[], int results_pipe_fd[]) 
 {
     close(pipe_fd[0]);  // Close the read-end of the pipe in the parent
@@ -73,7 +85,10 @@ int parent_process(int pipe_fd[], int results_pipe_fd[])
         closedir(dir);
         return -2;
     }
+
+    
     printf("Sent count of .usp files to child: %d\n", num_files);
+    // Send filenames to child for processing
     send_filenames(dir, pipe_fd[1]);
     closedir(dir);
 
